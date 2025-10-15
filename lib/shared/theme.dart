@@ -11,5 +11,10 @@ class AppTheme {
     scaffoldBackgroundColor: kPrimaryColor,
     colorScheme: ColorScheme.fromSwatch().copyWith(secondary: kSecondaryColor),
     textTheme: GoogleFonts.montserratTextTheme(),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: kPrimaryColor,
+      elevation: 0,
+      centerTitle: true,
+    ),
   );
 }

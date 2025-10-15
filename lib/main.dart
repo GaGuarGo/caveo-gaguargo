@@ -18,8 +18,8 @@ void main() async {
           return ErrorWidget(details.exception);
         }
         return const ErrorPage(
-          title: "Erro inesperado",
-          message: "Algo deu errado. Tente novamente mais tarde.",
+          title: "Ops! Ocorreu um erro durante sua sessão",
+          message: "Algo deu errado. Nãos se preocupe, estamos trabalhando nisso.",
         );
       };
 
