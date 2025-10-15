@@ -1,3 +1,4 @@
+import 'package:caveo_gaguargo/shared/theme.dart';
 import 'package:flutter/material.dart';
 
 class AppWidget extends StatelessWidget {
@@ -7,10 +8,7 @@ class AppWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Caveo Gaguargo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.theme,
       home: const Scaffold(body: Center(child: Text('Caveo Gaguargo'))),
     );
   }
