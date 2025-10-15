@@ -18,6 +18,8 @@ dependencies:
   go_router: ^16.2.4
   shared_preferences: ^2.5.3
   google_fonts: ^6.3.2
+  pretty_dio_logger: ^1.4.0
+  flutter_dotenv: ^6.0.0
 
 dev_dependencies:
   flutter_test:
