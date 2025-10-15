@@ -1,12 +1,6 @@
-import 'package:dio/dio.dart';
-
-class ProductError extends DioException {
+class ProductError implements Exception {
   final String message;
   final int? statusCode;
 
-  ProductError({
-    required super.requestOptions,
-    required this.message,
-    this.statusCode,
-  });
+  ProductError({required this.message, this.statusCode});
 }

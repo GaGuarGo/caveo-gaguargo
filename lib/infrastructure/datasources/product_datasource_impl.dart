@@ -14,7 +14,6 @@ class ProductDatasourceImpl implements ProductDataSource {
       return data;
     } on DioException catch (e) {
       throw ProductError(
-        requestOptions: e.requestOptions,
         message:
             e.response?.data['message'] ??
             'Ocorreu um erro ao buscar os produtos',
