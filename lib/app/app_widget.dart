@@ -1,3 +1,4 @@
+import 'package:caveo_gaguargo/shared/router.dart';
 import 'package:caveo_gaguargo/shared/theme.dart';
 import 'package:flutter/material.dart';
 
@@ -6,10 +7,10 @@ class AppWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Caveo Gaguargo',
       theme: AppTheme.theme,
-      home: const Scaffold(body: Center(child: Text('Caveo Gaguargo'))),
+      routerConfig: AppRouter.router,
     );
   }
 }
