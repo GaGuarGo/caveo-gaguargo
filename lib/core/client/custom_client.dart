@@ -1,4 +1,4 @@
-import 'package:caveo_gaguargo/shared/environment.dart';
+import 'package:caveo_gaguargo/core/environment/environment.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';

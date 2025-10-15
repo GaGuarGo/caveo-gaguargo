@@ -1,4 +1,4 @@
-import 'package:caveo_gaguargo/shared/colors.dart';
+import 'package:caveo_gaguargo/core/theme/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 

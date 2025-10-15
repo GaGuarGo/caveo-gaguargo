@@ -1,5 +1,5 @@
-import 'package:caveo_gaguargo/shared/router.dart';
-import 'package:caveo_gaguargo/shared/theme.dart';
+import 'package:caveo_gaguargo/core/router/router.dart';
+import 'package:caveo_gaguargo/core/theme/theme.dart';
 import 'package:flutter/material.dart';
 
 class AppWidget extends StatelessWidget {

@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:developer';
 
-import 'package:caveo_gaguargo/app/app_widget.dart';
-import 'package:caveo_gaguargo/presentation/pages/error/error_page.dart';
-import 'package:caveo_gaguargo/shared/environment.dart';
+import 'package:caveo_gaguargo/app_widget.dart';
+import 'package:caveo_gaguargo/presenter/pages/error/error_page.dart';
+import 'package:caveo_gaguargo/core/environment/environment.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
