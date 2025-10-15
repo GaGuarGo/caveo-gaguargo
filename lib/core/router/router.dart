@@ -1,6 +1,6 @@
-import 'package:caveo_gaguargo/presenter/pages/error/error_page.dart';
-import 'package:caveo_gaguargo/presenter/pages/products/products_page.dart';
-import 'package:caveo_gaguargo/presenter/pages/splash/splash_page.dart';
+import 'package:caveo_gaguargo/presenter/error/error_page.dart';
+import 'package:caveo_gaguargo/presenter/products/products_page.dart';
+import 'package:caveo_gaguargo/presenter/splash/splash_page.dart';
 import 'package:go_router/go_router.dart';
 
 class AppRouter {

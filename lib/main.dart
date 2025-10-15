@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:caveo_gaguargo/app_widget.dart';
-import 'package:caveo_gaguargo/presenter/pages/error/error_page.dart';
+import 'package:caveo_gaguargo/presenter/error/error_page.dart';
 import 'package:caveo_gaguargo/core/environment/environment.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
