@@ -30,6 +30,10 @@ O app carrega todos os produtos na primeira requisição e exibe apenas uma part
 ## Splash Animada
 A tela de splash exibe uma barra de progresso animada, proporcionando uma transição suave para a tela principal.
 
+## Cache local com criptografia
+O app guarda localmente dados de requisições que foram configuradas para ter cache local de forma segura com criptografia num período configurável
+(Padrão 10 minutos). E quando a mesma request é feita utilizando os mesmos parâmetros o interceptor barra a request e devolve os dados localmente armazenados.
+
 ## Como Executar
 1. Instale as dependências:
    ```sh
