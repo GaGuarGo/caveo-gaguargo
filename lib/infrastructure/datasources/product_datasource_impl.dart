@@ -10,7 +10,10 @@ class ProductDatasourceImpl implements ProductDataSource {
   @override
   Future<List<Map<String, dynamic>>> fetchProducts() async {
     try {
-      final Response(data: data) = await _client.get('/products');
+      final Response(data: data) = await _client.get(
+        '/products',
+        options: Options(extra: {'useCache': true}),
+      );
       return (data as List<dynamic>).cast<Map<String, dynamic>>();
     } on DioException catch (e) {
       throw ProductError(
