@@ -4,6 +4,7 @@ import 'package:caveo_gaguargo/presenter/providers/product/product_provider.dart
 import 'package:caveo_gaguargo/presenter/providers/product/product_state.dart';
 import 'package:caveo_gaguargo/presenter/widgets/skeleton.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class ProductsView extends ConsumerWidget {
@@ -42,9 +43,17 @@ class ProductsView extends ConsumerWidget {
                   );
                 }
 
-                return ProductCard(product: products[index]);
+                return ProductCard(product: products[index])
+                    .animate()
+                    .fadeIn(duration: 300.ms, delay: (100 * index).ms)
+                    .slideY(
+                      begin: -0.1,
+                      end: 0,
+                      duration: 300.ms,
+                      delay: (100 * index).ms,
+                    );
               },
-            ),
+            ).animate().fadeIn(duration: 300.ms, delay: 100.ms),
           );
         },
       ),
