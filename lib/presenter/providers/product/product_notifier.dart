@@ -38,13 +38,13 @@ class ProductNotifier extends StateNotifier<ProductState> {
       if (_loadProductsCommand.completed) {
         _allProducts = products;
         _currentPage = 1;
-        Future.microtask(() {
+        await Future.microtask(() {
           state = ProductState.loaded(products: _getCurrentPageProducts());
         });
       }
 
       if (_loadProductsCommand.hasError) {
-        Future.microtask(() {
+        await Future.microtask(() {
           state = ProductState.error(
             message: _loadProductsCommand.error.toString(),
           );
@@ -53,7 +53,7 @@ class ProductNotifier extends StateNotifier<ProductState> {
     } else {
       if (_currentPage * _pageSize < _allProducts.length) {
         _currentPage++;
-        Future.microtask(() {
+        await Future.microtask(() {
           state = ProductState.loaded(products: _getCurrentPageProducts());
         });
       }

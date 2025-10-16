@@ -6,7 +6,6 @@ import 'package:riverpod/legacy.dart';
 
 class SplashNotifier extends StateNotifier<SplashState> {
   final ProductUsecase _productUsecase;
-
   SplashNotifier({required ProductUsecase productUsecase})
     : _productUsecase = productUsecase,
       super(const SplashInitial()) {
