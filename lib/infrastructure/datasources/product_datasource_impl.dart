@@ -11,7 +11,7 @@ class ProductDatasourceImpl implements ProductDataSource {
   Future<List<Map<String, dynamic>>> fetchProducts() async {
     try {
       final Response(data: data) = await _client.get('/products');
-      return data;
+      return (data as List<dynamic>).cast<Map<String, dynamic>>();
     } on DioException catch (e) {
       throw ProductError(
         message:

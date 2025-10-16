@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-class ErrorPage extends StatelessWidget {
+class ErrorView extends StatelessWidget {
   final String title;
   final String message;
   final IconData icon;
   final VoidCallback? onRetry;
 
-  const ErrorPage({
+  const ErrorView({
     super.key,
     this.title = "Ocorreu um erro",
     this.message = "Algo deu errado. Tente novamente.",

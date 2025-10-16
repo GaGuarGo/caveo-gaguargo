@@ -1,7 +1,7 @@
 import 'package:caveo_gaguargo/data/dtos/product_dto.dart';
 
 class ProductEntity {
-  final String id;
+  final int id;
   final String title;
   final num price;
   final String description;

@@ -7,7 +7,7 @@ part of 'product_dto.dart';
 // **************************************************************************
 
 ProductDto _$ProductDtoFromJson(Map<String, dynamic> json) => ProductDto(
-  id: json['id'] as String,
+  id: (json['id'] as num).toInt(),
   title: json['title'] as String,
   price: json['price'] as num,
   description: json['description'] as String,
