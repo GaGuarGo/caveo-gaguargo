@@ -13,10 +13,11 @@ Caveo Gaguargo é um aplicativo Flutter que simula um catálogo de produtos com 
 ```
 lib/
   main.dart                // Ponto de entrada do app
+  app_widget.dart          // Widget principal
+  app_provider.dart        // Provider principal
   core/                    // Pasta com configurações centrais do projeto
-  app/                     // Widget principal
-  data/                    // DTOs, implementação dos repositórios, abstração do datasources
   domain/                  // Entidades, regras de negócio, use-scases, erros e abstração dos repositórios
+  data/                    // DTOs, implementação dos repositórios, abstração do datasources
   infrastructure/          // Implementação do datasource
   presenter/modules/       // Páginas e widgets visuais
   presenter/providers/     // Notifiers, providers e states do Riverpod
