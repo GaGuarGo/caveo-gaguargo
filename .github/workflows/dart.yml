@@ -1,24 +1,28 @@
-name: Dart
+name: Test App
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: dart-lang/setup-dart@9a04e6d73cca37bd455e0608d7e5092f881fd603
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.3'
+          channel: stable
 
       - name: Install dependencies
-        run: dart pub get
-        
-      - name: Analyze project source
-        run: dart analyze
-        
+        run: flutter pub get
+    
       - name: Run tests
-        run: dart test
+        run: flutter test
+
+     
