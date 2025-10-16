@@ -13,6 +13,7 @@ class AppTheme {
     textTheme: GoogleFonts.montserratTextTheme(),
     appBarTheme: const AppBarTheme(
       backgroundColor: kPrimaryColor,
+      surfaceTintColor: kPrimaryColor,
       elevation: 0,
       centerTitle: true,
     ),

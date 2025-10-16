@@ -19,8 +19,10 @@ class SplashView extends ConsumerWidget {
       error: (message) => ErrorView(message: message),
       orElse: () => _build(context),
       loaded: (products) {
-        ref.read(productNotifierProvider.notifier).setProducts(products);
-        context.goNamed(AppRouter.products);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(productNotifierProvider.notifier).setProducts(products);
+          context.goNamed(AppRouter.products);
+        });
         return _build(context);
       },
     );
