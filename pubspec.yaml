@@ -27,6 +27,7 @@ dependencies:
   hooks_riverpod: ^3.0.3
   cached_network_image: ^3.4.1
   shimmer: ^3.0.0
+  mocktail: ^1.0.4
 
 dev_dependencies:
   flutter_test:
