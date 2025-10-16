@@ -9,6 +9,9 @@ jobs:
   analyze-and-test:
     runs-on: ubuntu-latest
 
+    env:
+      API: ${{ secrets.API }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -19,10 +22,15 @@ jobs:
           flutter-version: '3.35.3'
           channel: stable
 
+      - name: Create .env file
+        run: echo API=${{ secrets.API }} > .env
+          
+      - name: Install dependencies
+        run: flutter pub get
+
       - name: Analyze code
-        run: dart analyze
+        run: flutter analyze
     
       - name: Run tests
         run: flutter test
-
      
