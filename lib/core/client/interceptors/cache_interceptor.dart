@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class CacheInterceptor extends Interceptor {
   final Map<String, Response> _memoryCache = {};
@@ -8,8 +8,7 @@ class CacheInterceptor extends Interceptor {
 
   CacheInterceptor({this.cacheDuration = const Duration(minutes: 10)});
 
-  Future<SharedPreferences> get _sp async =>
-      await SharedPreferences.getInstance();
+  final _storage = FlutterSecureStorage();
 
   @override
   void onRequest(
@@ -24,8 +23,7 @@ class CacheInterceptor extends Interceptor {
         return;
       }
 
-      final prefs = await _sp;
-      final cachedData = prefs.getString(key);
+      final cachedData = await _storage.read(key: key);
 
       if (cachedData != null) {
         final cachedMap = jsonDecode(cachedData);
@@ -43,7 +41,7 @@ class CacheInterceptor extends Interceptor {
           handler.resolve(cachedResponse);
           return;
         } else {
-          await prefs.remove(key);
+          await _storage.delete(key: key);
         }
       }
     }
@@ -59,12 +57,11 @@ class CacheInterceptor extends Interceptor {
         response.statusCode! >= 200) {
       _memoryCache[key] = response;
 
-      final prefs = await _sp;
       final cachedMap = {
         'timestamp': DateTime.now().toIso8601String(),
         'data': response.data,
       };
-      await prefs.setString(key, jsonEncode(cachedMap));
+      await _storage.write(key: key, value: jsonEncode(cachedMap));
     }
 
     super.onResponse(response, handler);
@@ -85,7 +82,6 @@ class CacheInterceptor extends Interceptor {
 
   Future<void> clearCache() async {
     _memoryCache.clear();
-    final prefs = await _sp;
-    await prefs.clear();
+    await _storage.deleteAll();
   }
 }

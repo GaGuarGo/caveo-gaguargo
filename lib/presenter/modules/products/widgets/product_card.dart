@@ -21,7 +21,7 @@ class ProductCard extends StatelessWidget {
                 aspectRatio: 0.85,
                 child: ImageWidget(
                   imageUrl: product.image,
-                  fit: BoxFit.fitHeight,
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
