@@ -12,7 +12,6 @@ class CustomClient extends DioForNative {
           receiveTimeout: const Duration(seconds: 60),
         ),
       ) {
-    interceptors.add(LogInterceptor());
     interceptors.add(PrettyDioLogger());
   }
 }

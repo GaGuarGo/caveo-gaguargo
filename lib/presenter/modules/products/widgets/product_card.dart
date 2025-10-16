@@ -19,7 +19,10 @@ class ProductCard extends StatelessWidget {
             Expanded(
               child: AspectRatio(
                 aspectRatio: 0.85,
-                child: ImageWidget(imageUrl: product.image, fit: BoxFit.fitHeight,),
+                child: ImageWidget(
+                  imageUrl: product.image,
+                  fit: BoxFit.fitHeight,
+                ),
               ),
             ),
             Padding(
