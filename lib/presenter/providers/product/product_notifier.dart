@@ -10,31 +10,56 @@ class ProductNotifier extends StateNotifier<ProductState> {
     : _productUsecase = productUsecase,
       super(const ProductState.initial(products: []));
 
+  List<ProductEntity> _allProducts = [];
+  int _currentPage = 0;
+  final int _pageSize = 10;
+
   void setProducts(List<ProductEntity> products) {
-    state = ProductState.loaded(products: products);
+    _allProducts = products;
+    _currentPage = 1;
+    Future.microtask(() {
+      state = ProductState.loaded(products: _getCurrentPageProducts());
+    });
   }
 
   late Command _loadProductsCommand;
 
-  void loadMoreProducts() async {
-    late List<ProductEntity> products;
+  Future<void> loadMoreProducts() async {
+    if (_allProducts.isEmpty) {
+      state = const ProductState.loading();
+      late List<ProductEntity> products;
+      _loadProductsCommand = Command(() async {
+        products = await _productUsecase.fetchProducts();
+      });
+      await _loadProductsCommand.execute();
 
-    _loadProductsCommand = Command(() async {
-      products = await _productUsecase.fetchProducts();
-    });
+      if (_loadProductsCommand.completed) {
+        _allProducts = products;
+        _currentPage = 1;
+        Future.microtask(() {
+          state = ProductState.loaded(products: _getCurrentPageProducts());
+        });
+      }
 
-    state = const ProductState.loading();
-
-    await _loadProductsCommand.execute();
-
-    if (_loadProductsCommand.completed) {
-      state = ProductState.loaded(products: products);
+      if (_loadProductsCommand.hasError) {
+        Future.microtask(() {
+          state = ProductState.error(
+            message: _loadProductsCommand.error.toString(),
+          );
+        });
+      }
+    } else {
+      if (_currentPage * _pageSize < _allProducts.length) {
+        _currentPage++;
+        Future.microtask(() {
+          state = ProductState.loaded(products: _getCurrentPageProducts());
+        });
+      }
     }
+  }
 
-    if (_loadProductsCommand.hasError) {
-      state = ProductState.error(
-        message: _loadProductsCommand.error.toString(),
-      );
-    }
+  List<ProductEntity> _getCurrentPageProducts() {
+    final end = (_currentPage * _pageSize).clamp(0, _allProducts.length);
+    return _allProducts.sublist(0, end);
   }
 }

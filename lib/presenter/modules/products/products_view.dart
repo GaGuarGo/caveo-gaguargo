@@ -2,6 +2,7 @@ import 'package:caveo_gaguargo/presenter/modules/error/error_view.dart';
 import 'package:caveo_gaguargo/presenter/modules/products/widgets/product_card.dart';
 import 'package:caveo_gaguargo/presenter/providers/product/product_provider.dart';
 import 'package:caveo_gaguargo/presenter/providers/product/product_state.dart';
+import 'package:caveo_gaguargo/presenter/widgets/skeleton.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -24,7 +25,7 @@ class ProductsView extends ConsumerWidget {
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4.0),
             child: GridView.builder(
-              itemCount: products.length,
+              itemCount: products.length + (2),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 4.0,
@@ -32,6 +33,15 @@ class ProductsView extends ConsumerWidget {
                 childAspectRatio: 0.85,
               ),
               itemBuilder: (_, index) {
+                if (index >= products.length) {
+                  ref.read(productNotifierProvider.notifier).loadMoreProducts();
+                  return Skeleton(
+                    height: MediaQuery.sizeOf(context).width - 32,
+                    width: MediaQuery.sizeOf(context).width - 32,
+                    radius: 8,
+                  );
+                }
+
                 return ProductCard(product: products[index]);
               },
             ),
