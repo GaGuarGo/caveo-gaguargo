@@ -3,4 +3,7 @@ class ProductError implements Exception {
   final int? statusCode;
 
   ProductError({required this.message, this.statusCode});
+
+  @override
+  String toString() => message;
 }
