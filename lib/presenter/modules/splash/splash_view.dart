@@ -14,41 +14,46 @@ class SplashView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(splashNotifierProvider);
 
-    return state.when(
-      initial: () => const SizedBox.shrink(),
+    return state.maybeWhen(
       error: (message) => ErrorView(message: message),
-      loading: () => Scaffold(
-        body: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            SizedBox(
-              width: 200,
-              child: LinearProgressIndicator(
-                color: Theme.of(context).primaryColorDark,
-                minHeight: 8,
-                backgroundColor: Theme.of(
-                  context,
-                ).primaryColorDark.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Carregando...',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: kSecondaryColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
+      orElse: () => _build(context),
       loaded: (products) {
-        context.goNamed(AppRouter.products, extra: products);
-        return const SizedBox.shrink();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          context.goNamed(AppRouter.products, extra: products);
+        });
+        return _build(context);
       },
     );
   }
+
+  Widget _build(BuildContext context) => Scaffold(
+    body: Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          SizedBox(
+            width: 200,
+            child: LinearProgressIndicator(
+              color: Theme.of(context).primaryColorDark,
+              minHeight: 8,
+              backgroundColor: Theme.of(
+                context,
+              ).primaryColorDark.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Carregando...',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: kSecondaryColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
