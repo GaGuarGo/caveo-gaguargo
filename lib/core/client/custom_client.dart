@@ -1,3 +1,4 @@
+import 'package:caveo_gaguargo/core/client/interceptors/cache_interceptor.dart';
 import 'package:caveo_gaguargo/core/environment/environment.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
@@ -12,6 +13,6 @@ class CustomClient extends DioForNative {
           receiveTimeout: const Duration(seconds: 60),
         ),
       ) {
-    interceptors.add(PrettyDioLogger());
+    interceptors.addAll([PrettyDioLogger(), CacheInterceptor()]);
   }
 }
