@@ -22,16 +22,16 @@ class SplashNotifier extends StateNotifier<SplashState> {
       products = await _productUsecase.fetchProducts();
     });
 
-    state = const SplashLoading();
+    state = SplashState.loading();
 
     await _loadProductsCommand.execute();
 
     if (_loadProductsCommand.completed) {
-      state = SplashLoaded(products: products);
+      state = SplashState.loaded(products: products);
     }
 
-    if (_loadProductsCommand.error != null) {
-      state = SplashError(message: _loadProductsCommand.error.toString());
+    if (_loadProductsCommand.hasError) {
+      state = SplashState.error(message: _loadProductsCommand.error.toString());
     }
   }
 }

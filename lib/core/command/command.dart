@@ -7,6 +7,8 @@ class Command {
   Exception? _error;
   Exception? get error => _error;
 
+  bool get hasError => _error != null;
+
   bool _completed = false;
   bool get completed => _completed;
 

@@ -1,6 +1,7 @@
 import 'package:caveo_gaguargo/core/router/router.dart';
 import 'package:caveo_gaguargo/core/theme/colors.dart';
 import 'package:caveo_gaguargo/presenter/modules/error/error_view.dart';
+import 'package:caveo_gaguargo/presenter/providers/product/product_provider.dart';
 import 'package:caveo_gaguargo/presenter/providers/splash/splash_provider.dart';
 import 'package:caveo_gaguargo/presenter/providers/splash/splash_state.dart';
 import 'package:flutter/material.dart';
@@ -18,9 +19,8 @@ class SplashView extends ConsumerWidget {
       error: (message) => ErrorView(message: message),
       orElse: () => _build(context),
       loaded: (products) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          context.goNamed(AppRouter.products, extra: products);
-        });
+        ref.read(productNotifierProvider.notifier).setProducts(products);
+        context.goNamed(AppRouter.products);
         return _build(context);
       },
     );
