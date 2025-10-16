@@ -4,6 +4,8 @@ import 'package:caveo_gaguargo/domain/use-cases/product_usecase.dart';
 import 'package:caveo_gaguargo/presenter/providers/product/product_state.dart';
 import 'package:riverpod/legacy.dart';
 
+//* OBS: Lógica adpatada para paginação simples devido falta de estrutura na api --- IGNORE ---
+
 class ProductNotifier extends StateNotifier<ProductState> {
   final ProductUsecase _productUsecase;
   ProductNotifier({required ProductUsecase productUsecase})

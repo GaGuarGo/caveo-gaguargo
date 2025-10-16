@@ -25,7 +25,7 @@ class ProductsView extends ConsumerWidget {
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4.0),
             child: GridView.builder(
-              itemCount: products.length + (2),
+              itemCount: products.length + (products.length >= 20 ? 0 : 2),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 4.0,
