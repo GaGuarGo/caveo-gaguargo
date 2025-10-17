@@ -19,7 +19,7 @@ class SplashNotifier extends StateNotifier<SplashState> {
   Future<void> loadApp() async {
     late List<ProductEntity> products;
 
-    _loadProductsCommand = Command(() async {
+    _loadProductsCommand = Command<ProductError>(() async {
       products = await _productUsecase.call();
     });
 
