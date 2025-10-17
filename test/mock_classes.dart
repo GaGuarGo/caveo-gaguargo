@@ -1,4 +1,4 @@
-import 'package:caveo_gaguargo/domain/use-cases/product_usecase.dart';
+import 'package:caveo_gaguargo/domain/use-cases/products/fetch_products_usecase.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockProductUsecase extends Mock implements ProductUsecase {}
+class MockProductUsecase extends Mock implements FetchProductUseCase {}

@@ -2,13 +2,13 @@ import 'package:caveo_gaguargo/core/command/command.dart';
 import 'package:caveo_gaguargo/core/use-case/useCase.dart';
 import 'package:caveo_gaguargo/domain/entities/product_entity.dart';
 import 'package:caveo_gaguargo/domain/errors/product_error.dart';
-import 'package:caveo_gaguargo/domain/use-cases/product_usecase.dart';
+import 'package:caveo_gaguargo/domain/use-cases/products/fetch_products_usecase.dart';
 import 'package:caveo_gaguargo/presenter/providers/splash/splash_state.dart';
 import 'package:riverpod/legacy.dart';
 
 class SplashNotifier extends StateNotifier<SplashState> {
   final UseCase<List<ProductEntity>, void> _productUsecase;
-  SplashNotifier({required ProductUsecase productUsecase})
+  SplashNotifier({required FetchProductUseCase productUsecase})
     : _productUsecase = productUsecase,
       super(const SplashInitial()) {
     loadApp();

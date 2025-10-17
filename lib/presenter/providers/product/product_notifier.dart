@@ -2,7 +2,7 @@ import 'package:caveo_gaguargo/core/command/command.dart';
 import 'package:caveo_gaguargo/core/use-case/useCase.dart';
 import 'package:caveo_gaguargo/domain/entities/product_entity.dart';
 import 'package:caveo_gaguargo/domain/errors/product_error.dart';
-import 'package:caveo_gaguargo/domain/use-cases/product_usecase.dart';
+import 'package:caveo_gaguargo/domain/use-cases/products/fetch_products_usecase.dart';
 import 'package:caveo_gaguargo/presenter/providers/product/product_state.dart';
 import 'package:riverpod/legacy.dart';
 
@@ -10,7 +10,7 @@ import 'package:riverpod/legacy.dart';
 
 class ProductNotifier extends StateNotifier<ProductState> {
   final UseCase<List<ProductEntity>, void> _productUsecase;
-  ProductNotifier({required ProductUsecase productUsecase})
+  ProductNotifier({required FetchProductUseCase productUsecase})
     : _productUsecase = productUsecase,
       super(const ProductState.initial(products: []));
 
