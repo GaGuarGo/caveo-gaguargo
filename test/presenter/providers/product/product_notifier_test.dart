@@ -1,5 +1,6 @@
 import 'package:caveo_gaguargo/app_provider.dart';
 import 'package:caveo_gaguargo/domain/entities/product_entity.dart';
+import 'package:caveo_gaguargo/domain/errors/product_error.dart';
 import 'package:caveo_gaguargo/presenter/providers/product/product_provider.dart';
 import 'package:caveo_gaguargo/presenter/providers/product/product_state.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -70,7 +71,7 @@ void main() {
     test('should return error on loading failure', () async {
       when(
         () => mockProductUsecase.call(),
-      ).thenThrow(Exception('Erro ao buscar produtos'));
+      ).thenThrow(ProductError(message: 'Erro ao buscar produtos'));
 
       final notifier = container.read(productNotifierProvider.notifier);
       await notifier.loadMoreProducts();

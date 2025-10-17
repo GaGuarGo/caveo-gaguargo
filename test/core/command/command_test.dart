@@ -1,3 +1,5 @@
+import 'package:caveo_gaguargo/core/error/app_error.dart';
+import 'package:caveo_gaguargo/domain/errors/product_error.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:caveo_gaguargo/core/command/command.dart';
 
@@ -20,8 +22,8 @@ void main() {
     });
 
     test('should capture error during execution', () async {
-      final command = Command(() async {
-        throw Exception('Simulated error');
+      final command = Command<ProductError>(() async {
+        throw ProductError(message: 'Simulated error');
       });
 
       await command.execute();
@@ -29,7 +31,7 @@ void main() {
       expect(command.running, isFalse);
       expect(command.completed, isFalse);
       expect(command.hasError, isTrue);
-      expect(command.error, isA<Exception>());
+      expect(command.error, isA<AppError>());
     });
 
     test('should prevent execution while already running', () async {
