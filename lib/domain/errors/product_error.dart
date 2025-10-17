@@ -1,9 +1,14 @@
-class ProductError implements Exception {
-  final String message;
-  final int? statusCode;
+import 'package:caveo_gaguargo/core/error/app_error.dart';
 
-  ProductError({required this.message, this.statusCode});
+class ProductError implements AppError {
+  @override
+  final String message;
+
+  @override
+  final int? code;
 
   @override
   String toString() => message;
+
+  ProductError({required this.message, this.code = 400});
 }

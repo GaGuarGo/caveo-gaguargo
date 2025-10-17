@@ -1,4 +1,6 @@
 import 'package:caveo_gaguargo/core/command/command.dart';
+import 'package:caveo_gaguargo/core/error/app_error.dart';
+import 'package:caveo_gaguargo/core/use-case/useCase.dart';
 import 'package:caveo_gaguargo/domain/entities/product_entity.dart';
 import 'package:caveo_gaguargo/domain/use-cases/product_usecase.dart';
 import 'package:caveo_gaguargo/presenter/providers/product/product_state.dart';
@@ -7,7 +9,7 @@ import 'package:riverpod/legacy.dart';
 //* OBS: Lógica adpatada para paginação simples devido falta de estrutura na api --- IGNORE ---
 
 class ProductNotifier extends StateNotifier<ProductState> {
-  final ProductUsecase _productUsecase;
+  final UseCase<List<ProductEntity>, void> _productUsecase;
   ProductNotifier({required ProductUsecase productUsecase})
     : _productUsecase = productUsecase,
       super(const ProductState.initial(products: []));
@@ -24,14 +26,14 @@ class ProductNotifier extends StateNotifier<ProductState> {
     });
   }
 
-  late Command _loadProductsCommand;
+  late Command<AppError> _loadProductsCommand;
 
   Future<void> loadMoreProducts() async {
     if (_allProducts.isEmpty) {
       state = const ProductState.loading();
       late List<ProductEntity> products;
       _loadProductsCommand = Command(() async {
-        products = await _productUsecase.fetchProducts();
+        products = await _productUsecase.call();
       });
       await _loadProductsCommand.execute();
 

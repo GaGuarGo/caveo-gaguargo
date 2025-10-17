@@ -20,7 +20,7 @@ class ProductDatasourceImpl implements ProductDataSource {
         message:
             e.response?.data['message'] ??
             'Ocorreu um erro ao buscar os produtos',
-        statusCode: e.response?.statusCode,
+        code: e.response?.statusCode,
       );
     }
   }

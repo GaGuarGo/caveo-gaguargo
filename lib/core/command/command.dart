@@ -1,11 +1,14 @@
-class Command {
+import 'package:caveo_gaguargo/core/error/app_error.dart';
+import 'package:caveo_gaguargo/core/error/app_generic_error.dart';
+
+class Command<E extends AppError> {
   Command(this._action);
 
   bool _running = false;
   bool get running => _running;
 
-  Exception? _error;
-  Exception? get error => _error;
+  AppError? _error;
+  AppError? get error => _error;
 
   bool get hasError => _error != null;
 
@@ -26,8 +29,10 @@ class Command {
     try {
       await _action();
       _completed = true;
-    } on Exception catch (error) {
+    } on E catch (error) {
       _error = error;
+    } on Exception catch (error) {
+      _error = AppGenericError(message: error.toString());
     } finally {
       _running = false;
     }

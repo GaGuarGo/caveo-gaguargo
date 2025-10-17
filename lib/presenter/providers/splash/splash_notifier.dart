@@ -1,24 +1,26 @@
 import 'package:caveo_gaguargo/core/command/command.dart';
+import 'package:caveo_gaguargo/core/use-case/useCase.dart';
 import 'package:caveo_gaguargo/domain/entities/product_entity.dart';
+import 'package:caveo_gaguargo/domain/errors/product_error.dart';
 import 'package:caveo_gaguargo/domain/use-cases/product_usecase.dart';
 import 'package:caveo_gaguargo/presenter/providers/splash/splash_state.dart';
 import 'package:riverpod/legacy.dart';
 
 class SplashNotifier extends StateNotifier<SplashState> {
-  final ProductUsecase _productUsecase;
+  final UseCase<List<ProductEntity>, void> _productUsecase;
   SplashNotifier({required ProductUsecase productUsecase})
     : _productUsecase = productUsecase,
       super(const SplashInitial()) {
     loadApp();
   }
 
-  late final Command _loadProductsCommand;
+  late final Command<ProductError> _loadProductsCommand;
 
   Future<void> loadApp() async {
     late List<ProductEntity> products;
 
     _loadProductsCommand = Command(() async {
-      products = await _productUsecase.fetchProducts();
+      products = await _productUsecase.call();
     });
 
     state = SplashState.loading();

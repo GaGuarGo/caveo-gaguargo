@@ -51,7 +51,7 @@ void main() {
       ];
 
       when(
-        () => mockProductUsecase.fetchProducts(),
+        () => mockProductUsecase.call(),
       ).thenAnswer((_) async => fakeProducts);
 
       final notifier = container.read(productNotifierProvider.notifier);
@@ -69,7 +69,7 @@ void main() {
 
     test('should return error on loading failure', () async {
       when(
-        () => mockProductUsecase.fetchProducts(),
+        () => mockProductUsecase.call(),
       ).thenThrow(Exception('Erro ao buscar produtos'));
 
       final notifier = container.read(productNotifierProvider.notifier);
