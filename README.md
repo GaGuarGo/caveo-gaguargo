@@ -35,11 +35,14 @@ O app guarda localmente dados de requisições que foram configuradas para ter c
 (Padrão 10 minutos). E quando a mesma request é feita utilizando os mesmos parâmetros o interceptor barra a request e devolve os dados localmente armazenados.
 
 ## Como Executar
-1. Instale as dependências:
+
+1. Crie um .env preenchendo os valores descritos .env.example
+
+2. Instale as dependências:
    ```sh
    flutter pub get
    ```
-2. Execute o app:
+3. Execute o app:
    ```sh
    flutter run
    ```
