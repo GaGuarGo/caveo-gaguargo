@@ -22,16 +22,24 @@ jobs:
         id: notes
         uses: mikepenz/release-changelog-builder-action@v5
         with:
-          toTag: ${{ github.event.pull_request.head.sha }}
           fromTag: ${{ github.event.pull_request.base.sha }}
+          toTag: ${{ github.event.pull_request.head.sha }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Get changed files
+        id: files
+        run: |
+          echo "FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | paste -sd ',' -)" >> $GITHUB_ENV
+
       - name: Post release note as PR comment
-        if: success() && steps.notes.outputs.changelog != ''
+        if: success()
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           message: |
             📝 **Release Notes Preview**
             ---
             ${{ steps.notes.outputs.changelog }}
+
+            📂 **Arquivos alterados:**
+            ${{ env.FILES }}
