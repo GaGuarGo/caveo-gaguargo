@@ -5,6 +5,10 @@ on:
     branches: [ main ]
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   release-note:
     runs-on: ubuntu-latest
@@ -18,11 +22,13 @@ jobs:
         id: notes
         uses: mikepenz/release-changelog-builder-action@v5
         with:
-          configuration: ".github/changelog-config.json"
+          toTag: ${{ github.event.pull_request.head.sha }}
+          fromTag: ${{ github.event.pull_request.base.sha }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Post release note as PR comment
+        if: success() && steps.notes.outputs.changelog != ''
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           message: |
