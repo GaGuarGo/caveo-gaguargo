@@ -1,0 +1,31 @@
+name: Generate Release Note
+
+on:
+  pull_request:
+    branches: [ main ]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  release-note:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release note
+        id: notes
+        uses: mikepenz/release-changelog-builder-action@v5
+        with:
+          configuration: ".github/changelog-config.json"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post release note as PR comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          message: |
+            📝 **Release Notes Preview**
+            ---
+            ${{ steps.notes.outputs.changelog }}
