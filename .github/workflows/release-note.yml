@@ -80,10 +80,11 @@ jobs:
               """
 
               payload = json.dumps({"prompt": prompt})
-              cur.execute(
-                  "SELECT SNOWFLAKE.CORTEX.COMPLETE('gpt-4o-mini', PARSE_JSON(?))",
-                  (payload,),
-              )
+             cur.execute(
+              "SELECT SNOWFLAKE.CORTEX.COMPLETE('gpt-4o-mini', PARSE_JSON(%s))",
+              (payload,),
+          )
+
               release_note = cur.fetchone()[0]
 
               print("Release note:", release_note)
