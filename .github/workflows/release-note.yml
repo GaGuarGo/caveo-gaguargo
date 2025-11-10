@@ -39,7 +39,7 @@ jobs:
 
       - name: Instalar SnowSQL
         run: |
-          sudo apt-get update && sudo apt-get install -y snowsql
+          sudo dpkg -i snowflake-cli-<version>.deb
 
       - name: Gerar análise técnica via Snowflake
         id: tech_doc
