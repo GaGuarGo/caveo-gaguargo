@@ -1,13 +1,14 @@
-name: Generate Release Note
+name: Save PR Diff to Snowflake
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  release-note:
+  save-diff:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,9 +21,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install snowflake-connector-python requests
+        run: pip install snowflake-connector-python
 
       - name: Get PR diff
         id: diff
@@ -31,92 +30,59 @@ jobs:
             echo "Obtendo diff do Pull Request..."
             curl -s -H "Accept: application/vnd.github.v3.diff" \
               "${{ github.event.pull_request.diff_url }}" > diff.txt
+            echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
           else
             echo "Obtendo diff entre main e HEAD..."
             git fetch origin main
             git diff origin/main...HEAD > diff.txt
+            echo "PR_NUMBER=0" >> $GITHUB_ENV
           fi
 
-          # Codifica o diff em base64 (compatível com qualquer SO)
-          DIFF_CONTENT=$(cat diff.txt | base64 | tr -d '\n')
-          echo "DIFF_BASE64=$DIFF_CONTENT" >> $GITHUB_ENV
-
-      - name: Generate Release Notes via Snowflake
+      - name: Save diff to Snowflake
         env:
           SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
           SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
           SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
+          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
           SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
-          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
-          GITHUB_PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-          GITHUB_PR_TITLE: ${{ github.event.pull_request.title }}
-          DIFF_BASE64: ${{ steps.diff.outputs.diff_base64 }}
+          PR_NUMBER: ${{ env.PR_NUMBER }}
         run: |
           python <<'EOF'
-import os, base64, snowflake.connector, json
+          import os
+          import snowflake.connector
 
-diff = base64.b64decode(os.getenv("DIFF_BASE64", "")).decode("utf-8")[:10000]
+          pr_number = int(os.getenv("PR_NUMBER", "0"))
 
-conn = snowflake.connector.connect(
-    user=os.getenv("SNOWFLAKE_USER"),
-    password=os.getenv("SNOWFLAKE_PASSWORD"),
-    account=os.getenv("SNOWFLAKE_ACCOUNT"),
-    warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
-    database=os.getenv("SNOWFLAKE_DATABASE"),
-    schema=os.getenv("SNOWFLAKE_SCHEMA"),
-    role=os.getenv("SNOWFLAKE_ROLE"),
-)
+          # Lê o diff
+          with open("diff.txt", "r") as f:
+              diff_content = f.read()
 
-cur = conn.cursor()
-try:
-    prompt = f"""
-    Gere uma release note técnica e objetiva com base nas seguintes mudanças:
+          # Trunca caso seja muito grande (Snowflake limita tamanho de texto)
+          diff_content = diff_content[:16000]
 
-    {diff}
-    """
+          # Conecta ao Snowflake
+          conn = snowflake.connector.connect(
+              user=os.getenv("SNOWFLAKE_USER"),
+              password=os.getenv("SNOWFLAKE_PASSWORD"),
+              account=os.getenv("SNOWFLAKE_ACCOUNT"),
+              warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
+              database=os.getenv("SNOWFLAKE_DATABASE"),
+              schema=os.getenv("SNOWFLAKE_SCHEMA"),
+              role=os.getenv("SNOWFLAKE_ROLE")
+          )
 
-    payload = json.dumps({"prompt": prompt})
+          cur = conn.cursor()
+          try:
+              # Insere o diff
+              cur.execute(
+                  "INSERT INTO pr_diffs (pr_number, diff_text) VALUES (%s, %s)",
+                  (pr_number, diff_content)
+              )
 
-    cur.execute(
-        "SELECT SNOWFLAKE.CORTEX.COMPLETE('gpt-4o-mini', PARSE_JSON(%s))",
-        (payload,),
-    )
-
-    release_note = cur.fetchone()[0]
-    print("Release note:", release_note)
-
-    cur.execute(f"""
-    INSERT INTO RELEASE_NOTE (VERSION, PR_NUMBER, AUTHOR, TITLE, CHANGES_SUMMARY, RELEASE_NOTE, CREATED_AT)
-    VALUES (
-      'vNEXT',
-      '{os.getenv("GITHUB_PR_NUMBER")}',
-      '{os.getenv("GITHUB_PR_AUTHOR")}',
-      '{os.getenv("GITHUB_PR_TITLE").replace("'", "''")}',
-      '{diff[:500].replace("'", "''")}',
-      '{release_note.replace("'", "''")}',
-      CURRENT_TIMESTAMP()
-    );
-    """)
-
-    with open("release_note.txt", "w") as f:
-        f.write(release_note)
-
-finally:
-    cur.close()
-    conn.close()
-EOF
-
-      - name: Comment on PR
-        if: github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: "📝 Release Note"
-          message: |
-            **Release Note Gerada Automaticamente:**
-
-            ```
-            $(cat release_note.txt)
-            ```
+              print(f"✅ Diff salvo no Snowflake para PR #{pr_number}")
+          finally:
+              cur.close()
+              conn.close()
+          EOF
