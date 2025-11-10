@@ -50,8 +50,7 @@ jobs:
           PR_NUMBER: ${{ env.PR_NUMBER }}
         run: |
           python <<'EOF'
-          import os
-          import snowflake.connector
+          import os, base64, snowflake.connector
 
           pr_number = int(os.getenv("PR_NUMBER", "0"))
 
@@ -59,8 +58,11 @@ jobs:
           with open("diff.txt", "r") as f:
               diff_content = f.read()
 
-          # Trunca caso seja muito grande (Snowflake limita tamanho de texto)
-          diff_content = diff_content[:16000]
+          # Trunca se for muito grande (por segurança)
+          diff_content = diff_content[:20000]
+
+          # Codifica em base64 (para evitar erro de parsing)
+          diff_encoded = base64.b64encode(diff_content.encode("utf-8")).decode("utf-8")
 
           # Conecta ao Snowflake
           conn = snowflake.connector.connect(
@@ -75,13 +77,15 @@ jobs:
 
           cur = conn.cursor()
           try:
+             
               # Insere o diff
               cur.execute(
                   "INSERT INTO code_diffs (pr_number, diff_text) VALUES (%s, %s)",
-                  (pr_number, diff_content)
+                  (pr_number, diff_encoded)
               )
 
-              print(f"✅ Diff salvo no Snowflake para PR #{pr_number}")
+              print(f"✅ Diff salvo com sucesso no Snowflake para PR #{pr_number}")
+
           finally:
               cur.close()
               conn.close()
