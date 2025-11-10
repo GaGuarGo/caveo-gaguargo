@@ -1,4 +1,4 @@
-name: Save PR Diff to Snowflake (async, split jobs)
+name: Save PR Diff to Snowflake (direct)
 
 on:
   pull_request:
@@ -8,61 +8,32 @@ on:
       - main
 
 jobs:
-  get-diff:
-    name: Get and Upload Diff
+  save-diff:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Get PR diff
+      - name: Get PR diff and export as variable
         id: diff
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "Obtendo diff do Pull Request..."
-            curl -s -H "Accept: application/vnd.github.v3.diff" \
-              "${{ github.event.pull_request.diff_url }}" > diff.txt
+            DIFF=$(curl -s -H "Accept: application/vnd.github.v3.diff" "${{ github.event.pull_request.diff_url }}")
             echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
           else
             echo "Obtendo diff entre main e HEAD..."
             git fetch origin main
-            git diff origin/main...HEAD > diff.txt
+            DIFF=$(git diff origin/main...HEAD)
             echo "PR_NUMBER=0" >> $GITHUB_ENV
           fi
 
-      - name: Upload diff as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-diff
-          path: diff.txt
-
-      - name: Save PR number
-        run: echo "${{ env.PR_NUMBER }}" > pr_number.txt
-
-      - name: Upload PR number
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-number
-          path: pr_number.txt
-
-  upload-diff:
-    name: Upload Diff to Snowflake
-    runs-on: ubuntu-latest
-    needs: get-diff
-
-    steps:
-      - name: Download diff artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: pr-diff
-          path: .
-
-      - name: Download PR number artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: pr-number
-          path: .
+          # Trunca se muito grande (Snowflake tem limite)
+          DIFF_SHORT=$(echo "$DIFF" | head -c 16000)
+          # Codifica em base64 para evitar problemas de encoding
+          DIFF_B64=$(echo "$DIFF_SHORT" | base64 | tr -d '\n')
+          echo "DIFF_B64=$DIFF_B64" >> $GITHUB_ENV
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -70,8 +41,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: |
-          pip install snowflake-connector-python aiofiles
+        run: pip install snowflake-connector-python
 
       - name: Save diff to Snowflake
         env:
@@ -82,48 +52,41 @@ jobs:
           SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
           SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
           SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+          PR_NUMBER: ${{ env.PR_NUMBER }}
+          DIFF_B64: ${{ env.DIFF_B64 }}
         run: |
           python <<'EOF'
-          import os
-          import asyncio
-          import aiofiles
-          import snowflake.connector
+          import os, base64, snowflake.connector
 
-          async def read_diff_file(path):
-              async with aiofiles.open(path, mode="r") as f:
-                  return await f.read()
+          pr_number = int(os.getenv("PR_NUMBER", "0"))
+          diff_b64 = os.getenv("DIFF_B64", "")
 
-          async def main():
-              # Lê PR number
-              async with aiofiles.open("pr_number.txt", mode="r") as f:
-                  pr_number_str = (await f.read()).strip()
-              pr_number = int(pr_number_str or "0")
+          if not diff_b64:
+              raise Exception("❌ Nenhum diff encontrado")
 
-              diff_content = await read_diff_file("diff.txt")
-              diff_content = diff_content[:16000]  # truncar se muito grande
+          diff_text = base64.b64decode(diff_b64.encode()).decode(errors="ignore")
 
-              conn = snowflake.connector.connect(
-                  user=os.getenv("SNOWFLAKE_USER"),
-                  password=os.getenv("SNOWFLAKE_PASSWORD"),
-                  account=os.getenv("SNOWFLAKE_ACCOUNT"),
-                  warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
-                  database=os.getenv("SNOWFLAKE_DATABASE"),
-                  schema=os.getenv("SNOWFLAKE_SCHEMA"),
-                  role=os.getenv("SNOWFLAKE_ROLE")
+          # Conecta ao Snowflake
+          conn = snowflake.connector.connect(
+              user=os.getenv("SNOWFLAKE_USER"),
+              password=os.getenv("SNOWFLAKE_PASSWORD"),
+              account=os.getenv("SNOWFLAKE_ACCOUNT"),
+              warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
+              database=os.getenv("SNOWFLAKE_DATABASE"),
+              schema=os.getenv("SNOWFLAKE_SCHEMA"),
+              role=os.getenv("SNOWFLAKE_ROLE")
+          )
+
+          cur = conn.cursor()
+          try:
+              
+              cur.execute(
+                  "INSERT INTO code_diffs (pr_number, diff_text) VALUES (%s, %s)",
+                  (pr_number, diff_text)
               )
 
-              cur = conn.cursor()
-              try:
-
-                  cur.execute(
-                      "INSERT INTO code_diffs (pr_number, diff_text) VALUES (%s, %s)",
-                      (pr_number, diff_content)
-                  )
-
-                  print(f"✅ Diff salvo no Snowflake para PR #{pr_number}")
-              finally:
-                  cur.close()
-                  conn.close()
-
-          asyncio.run(main())
+              print(f"✅ Diff salvo no Snowflake para PR #{pr_number}")
+          finally:
+              cur.close()
+              conn.close()
           EOF
