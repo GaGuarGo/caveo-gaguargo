@@ -28,13 +28,17 @@ jobs:
         id: diff
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "Obtendo diff do Pull Request..."
             curl -s -H "Accept: application/vnd.github.v3.diff" \
-              "${{ github.event.pull_request.url }}" > diff.txt
+              "${{ github.event.pull_request.diff_url }}" > diff.txt
           else
+            echo "Obtendo diff entre main e HEAD..."
             git fetch origin main
             git diff origin/main...HEAD > diff.txt
           fi
-          DIFF_CONTENT=$(cat diff.txt | base64 -w0)
+
+          # Codifica o diff em base64 (compatível com qualquer SO)
+          DIFF_CONTENT=$(cat diff.txt | base64 | tr -d '\n')
           echo "DIFF_BASE64=$DIFF_CONTENT" >> $GITHUB_ENV
 
       - name: Generate release note with Snowflake
