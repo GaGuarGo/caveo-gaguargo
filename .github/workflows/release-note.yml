@@ -1,4 +1,4 @@
-name: Save PR Diff to Snowflake
+name: Save PR Diff to Snowflake (async)
 
 on:
   pull_request:
@@ -21,7 +21,8 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install snowflake-connector-python
+        run: |
+          pip install snowflake-connector-python aiofiles
 
       - name: Get PR diff
         id: diff
@@ -50,45 +51,41 @@ jobs:
           PR_NUMBER: ${{ env.PR_NUMBER }}
         run: |
           python <<'EOF'
-          import os, base64, snowflake.connector, aiofiles, asyncio
+          import os
+          import asyncio
+          import aiofiles
+          import snowflake.connector
 
-          pr_number = int(os.getenv("PR_NUMBER", "0"))
+          async def read_diff_file():
+              async with aiofiles.open("diff.txt", mode="r") as f:
+                  return await f.read()
 
-          # Lê o diff
-          async with aiofiles.open("diff.txt", "r") as f:
-          diff_content = await f.read()
+          async def main():
+              pr_number = int(os.getenv("PR_NUMBER", "0"))
+              diff_content = await read_diff_file()
+              diff_content = diff_content[:16000]  # truncar caso muito grande
 
-          print(f"📄 Tamanho do diff: {len(diff_content)} caracteres")
-
-          # Trunca se for muito grande (por segurança)
-          diff_content = diff_content[:20000]
-
-          # Codifica em base64 (para evitar erro de parsing)
-          diff_encoded = base64.b64encode(diff_content.encode("utf-8")).decode("utf-8")
-
-          # Conecta ao Snowflake
-          conn = snowflake.connector.connect(
-              user=os.getenv("SNOWFLAKE_USER"),
-              password=os.getenv("SNOWFLAKE_PASSWORD"),
-              account=os.getenv("SNOWFLAKE_ACCOUNT"),
-              warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
-              database=os.getenv("SNOWFLAKE_DATABASE"),
-              schema=os.getenv("SNOWFLAKE_SCHEMA"),
-              role=os.getenv("SNOWFLAKE_ROLE")
-          )
-
-          cur = conn.cursor()
-          try:
-             
-              # Insere o diff
-              cur.execute(
-                  "INSERT INTO code_diffs (pr_number, diff_text) VALUES (%s, %s)",
-                  (pr_number, diff_encoded)
+              conn = snowflake.connector.connect(
+                  user=os.getenv("SNOWFLAKE_USER"),
+                  password=os.getenv("SNOWFLAKE_PASSWORD"),
+                  account=os.getenv("SNOWFLAKE_ACCOUNT"),
+                  warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
+                  database=os.getenv("SNOWFLAKE_DATABASE"),
+                  schema=os.getenv("SNOWFLAKE_SCHEMA"),
+                  role=os.getenv("SNOWFLAKE_ROLE")
               )
 
-              print(f"✅ Diff salvo com sucesso no Snowflake para PR #{pr_number}")
+              cur = conn.cursor()
+              try:
+                  cur.execute(
+                      "INSERT INTO code_diffs (pr_number, diff_text) VALUES (%s, %s)",
+                      (pr_number, diff_content)
+                  )
 
-          finally:
-              cur.close()
-              conn.close()
+                  print(f"✅ Diff salvo no Snowflake para PR #{pr_number}")
+              finally:
+                  cur.close()
+                  conn.close()
+
+          asyncio.run(main())
           EOF
