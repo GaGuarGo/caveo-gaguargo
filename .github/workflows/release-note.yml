@@ -79,12 +79,10 @@ jobs:
               {diff}
               """
 
-              cur.execute(f"""
-              SELECT SNOWFLAKE.CORTEX.COMPLETE(
-                'llama3.1-70b',
-                PARSE_JSON('{{"prompt": "{prompt}"}}')
-              );
-              """)
+              payload = json.dumps({"prompt": prompt})
+              query = f"SELECT SNOWFLAKE.CORTEX.COMPLETE('gpt-4o-mini', PARSE_JSON('{payload}'));"
+              cur.execute(query)
+              
               release_note = cur.fetchone()[0]
               print("Release note:", release_note)
 
