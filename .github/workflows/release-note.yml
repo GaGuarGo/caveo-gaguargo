@@ -57,6 +57,8 @@ jobs:
           # Lê o diff
           with open("diff.txt", "r") as f:
               diff_content = f.read()
+          
+          print(f"📄 Tamanho do diff: {len(diff_content)} caracteres")
 
           # Trunca se for muito grande (por segurança)
           diff_content = diff_content[:20000]
