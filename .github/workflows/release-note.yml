@@ -41,8 +41,7 @@ jobs:
           DIFF_CONTENT=$(cat diff.txt | base64 | tr -d '\n')
           echo "DIFF_BASE64=$DIFF_CONTENT" >> $GITHUB_ENV
 
-      - name: Generate release note with Snowflake
-        id: snowflake
+      - name: Generate Release Notes via Snowflake
         env:
           SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
@@ -51,64 +50,64 @@ jobs:
           SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
           SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
           SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
-          DIFF_BASE64: ${{ env.DIFF_BASE64 }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
-          GITHUB_PR_TITLE: ${{ github.event.pull_request.title }}
           GITHUB_PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          GITHUB_PR_TITLE: ${{ github.event.pull_request.title }}
+          DIFF_BASE64: ${{ steps.diff.outputs.diff_base64 }}
         run: |
           python <<'EOF'
-          import os, base64, snowflake.connector, json
+import os, base64, snowflake.connector, json
 
-          diff = base64.b64decode(os.getenv("DIFF_BASE64", "")).decode("utf-8")[:10000]
+diff = base64.b64decode(os.getenv("DIFF_BASE64", "")).decode("utf-8")[:10000]
 
-          conn = snowflake.connector.connect(
-              user=os.getenv("SNOWFLAKE_USER"),
-              password=os.getenv("SNOWFLAKE_PASSWORD"),
-              account=os.getenv("SNOWFLAKE_ACCOUNT"),
-              warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
-              database=os.getenv("SNOWFLAKE_DATABASE"),
-              schema=os.getenv("SNOWFLAKE_SCHEMA"),
-              role=os.getenv("SNOWFLAKE_ROLE"),
-          )
+conn = snowflake.connector.connect(
+    user=os.getenv("SNOWFLAKE_USER"),
+    password=os.getenv("SNOWFLAKE_PASSWORD"),
+    account=os.getenv("SNOWFLAKE_ACCOUNT"),
+    warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
+    database=os.getenv("SNOWFLAKE_DATABASE"),
+    schema=os.getenv("SNOWFLAKE_SCHEMA"),
+    role=os.getenv("SNOWFLAKE_ROLE"),
+)
 
-          cur = conn.cursor()
-          try:
-              prompt = f"""
-              Gere uma release note curta e objetiva com base nas mudanças abaixo:
+cur = conn.cursor()
+try:
+    prompt = f"""
+    Gere uma release note técnica e objetiva com base nas seguintes mudanças:
 
-              {diff}
-              """
+    {diff}
+    """
 
-              payload = json.dumps({"prompt": prompt})
-             cur.execute(
-              "SELECT SNOWFLAKE.CORTEX.COMPLETE('gpt-4o-mini', PARSE_JSON(%s))",
-              (payload,),
-          )
+    payload = json.dumps({"prompt": prompt})
 
-              release_note = cur.fetchone()[0]
+    cur.execute(
+        "SELECT SNOWFLAKE.CORTEX.COMPLETE('gpt-4o-mini', PARSE_JSON(%s))",
+        (payload,),
+    )
 
-              print("Release note:", release_note)
+    release_note = cur.fetchone()[0]
+    print("Release note:", release_note)
 
-              # Inserir na tabela de release notes (opcional)
-              cur.execute(f"""
-              INSERT INTO RELEASE_NOTE (VERSION, PR_NUMBER, AUTHOR, TITLE, CHANGES_SUMMARY, RELEASE_NOTE, CREATED_AT)
-              VALUES (
-                'vNEXT',
-                '{os.getenv("GITHUB_PR_NUMBER")}',
-                '{os.getenv("GITHUB_PR_AUTHOR")}',
-                '{os.getenv("GITHUB_PR_TITLE").replace("'", "''")}',
-                '{diff[:500].replace("'", "''")}',
-                '{release_note.replace("'", "''")}',
-                CURRENT_TIMESTAMP()
-              );
-              """)
-          finally:
-              cur.close()
-              conn.close()
+    cur.execute(f"""
+    INSERT INTO RELEASE_NOTE (VERSION, PR_NUMBER, AUTHOR, TITLE, CHANGES_SUMMARY, RELEASE_NOTE, CREATED_AT)
+    VALUES (
+      'vNEXT',
+      '{os.getenv("GITHUB_PR_NUMBER")}',
+      '{os.getenv("GITHUB_PR_AUTHOR")}',
+      '{os.getenv("GITHUB_PR_TITLE").replace("'", "''")}',
+      '{diff[:500].replace("'", "''")}',
+      '{release_note.replace("'", "''")}',
+      CURRENT_TIMESTAMP()
+    );
+    """)
 
-          with open("release_note.txt", "w") as f:
-              f.write(release_note)
-          EOF
+    with open("release_note.txt", "w") as f:
+        f.write(release_note)
+
+finally:
+    cur.close()
+    conn.close()
+EOF
 
       - name: Comment on PR
         if: github.event_name == 'pull_request'
