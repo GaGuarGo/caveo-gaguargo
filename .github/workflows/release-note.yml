@@ -1,160 +1,146 @@
-name: Analisar alterações e gerar release note via Snowflake
+name: 🧠 Snowflake Release Flow
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    branches: [staging, main]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
-  analyze:
+  analyze-pr:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout do código
+      - name: Checkout código
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Obter arquivos modificados
+      - name: Instalar dependências Python
+        run: pip install snowflake-connector-python requests
+
+      - name: Obter diff do PR
         id: diff
         run: |
           git fetch origin ${{ github.base_ref }} --depth=1
-          git diff --name-only origin/${{ github.base_ref }}...HEAD > changed_files.txt
-          echo "Arquivos alterados:"
-          cat changed_files.txt
+          echo "DIFF<<EOF" >> $GITHUB_ENV
+          git diff origin/${{ github.base_ref }}...HEAD >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
-      - name: Montar payload com conteúdo dos arquivos alterados
-        id: payload
-        run: |
-          echo "[" > payload.json
-          FIRST=1
-          while IFS= read -r FILE; do
-            if [ -f "$FILE" ]; then
-              CONTENT=$(cat "$FILE" | head -c 4000 | sed "s/'/''/g" | sed ':a;N;$!ba;s/\n/\\n/g')
-              if [ $FIRST -eq 0 ]; then echo "," >> payload.json; fi
-              FIRST=0
-              echo "{\"file\":\"$FILE\",\"content\":\"$CONTENT\"}" >> payload.json
-            fi
-          done < changed_files.txt
-          echo "]" >> payload.json
-
-      - name: Instalar SnowSQL
-        run: |
-          sudo dpkg -i snowflake-cli-<3.13.0>.deb
-
-      - name: Gerar análise técnica via Snowflake
-        id: tech_doc
+      - name: Gerar documentação com Snowflake (modo staging ou main)
+        id: snowflake
         env:
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
           SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
           SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
           SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
           SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
-          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+          GITHUB_REF: ${{ github.ref }}
         run: |
-          CONTEXT=$(cat payload.json | sed "s/'/''/g" | head -c 20000)
-          QUERY="
-          WITH diff_data AS (
-            SELECT PARSE_JSON('$CONTEXT') AS files
-          ),
-          analyzed AS (
-            SELECT SNOWFLAKE.CORTEX.COMPLETE(
-              'llama3.1-70b',
-              CONCAT(
-                'Analise tecnicamente as seguintes alterações de código Flutter e gere um resumo técnico detalhado.\n',
-                TO_JSON(files)
-              )
-            ) AS doc
-            FROM diff_data
+          python <<'EOF'
+          import os, snowflake.connector, json
+
+          conn = snowflake.connector.connect(
+              user=os.getenv("SNOWFLAKE_USER"),
+              password=os.getenv("SNOWFLAKE_PASSWORD"),
+              account=os.getenv("SNOWFLAKE_ACCOUNT"),
+              warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
+              database=os.getenv("SNOWFLAKE_DATABASE"),
+              schema=os.getenv("SNOWFLAKE_SCHEMA"),
+              role=os.getenv("SNOWFLAKE_ROLE")
           )
-          SELECT doc FROM analyzed;
-          "
-          snowsql -a $SNOWFLAKE_ACCOUNT -u $SNOWFLAKE_USER -r $SNOWFLAKE_ROLE \
-                  -w $SNOWFLAKE_WAREHOUSE -d $SNOWFLAKE_DATABASE -s $SNOWFLAKE_SCHEMA \
-                  -q "$QUERY" > tech_result.txt
+          cur = conn.cursor()
 
-          cat tech_result.txt | tail -n +3 > clean_tech.txt
-          DOC=$(cat clean_tech.txt | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
-          echo "doc=$DOC" >> $GITHUB_OUTPUT
+          diff_text = os.getenv("DIFF", "")[:10000]  # limita para evitar erro de payload
 
-      - name: Comentar documentação técnica no PR
+          branch = os.getenv("GITHUB_REF", "")
+          is_main = "main" in branch
+
+          if is_main:
+              # Gera release note final
+              cur.execute(f"""
+              SELECT SNOWFLAKE.CORTEX.COMPLETE(
+                'llama3.1-70b',
+                'Analise as mudanças de código e gere uma nota de versão em linguagem natural:\n{diff_text}'
+              ) AS RELEASE_NOTE;
+              """)
+              result = cur.fetchone()[0]
+              print("::set-output name=release_note::" + json.dumps(result))
+          else:
+              # Gera doc técnica (não armazena)
+              cur.execute(f"""
+              SELECT SNOWFLAKE.CORTEX.COMPLETE(
+                'llama3.1-70b',
+                'Analise tecnicamente as mudanças e explique o impacto e novas funcionalidades:\n{diff_text}'
+              ) AS TECH_DOC;
+              """)
+              result = cur.fetchone()[0]
+              print("::set-output name=tech_doc::" + json.dumps(result))
+
+          cur.close()
+          conn.close()
+          EOF
+
+      - name: Comentar resultado no PR
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           message: |
-            🧠 **Análise Técnica (Snowflake + GPT)**
-            ---
-            ${{ steps.tech_doc.outputs.doc }}
+            ${{ github.base_ref == 'main' && format('🚀 **Release Note Gerada:**\n\n{0}', steps.snowflake.outputs.release_note) || format('🧠 **Análise Técnica:**\n\n{0}', steps.snowflake.outputs.tech_doc) }}
 
-      - name: Gerar release note (somente na main)
-        if: github.base_ref == 'main'
-        id: release_note
+      - name: Enviar notificação ao Slack
         env:
-          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-          SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
-          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
-          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
-          SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
-          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
-          TECH_DOC: ${{ steps.tech_doc.outputs.doc }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          QUERY="
-          SELECT SNOWFLAKE.CORTEX.COMPLETE(
-            'llama3.1-70b',
-            CONCAT(
-              'Com base na documentação técnica a seguir, gere uma nota de versão amigável para o usuário final:\n',
-              '$TECH_DOC'
-            )
-          ) AS release_note;
-          "
-          snowsql -a $SNOWFLAKE_ACCOUNT -u $SNOWFLAKE_USER -r $SNOWFLAKE_ROLE \
-                  -w $SNOWFLAKE_WAREHOUSE -d $SNOWFLAKE_DATABASE -s $SNOWFLAKE_SCHEMA \
-                  -q "$QUERY" > release_result.txt
+          if [[ "${{ github.base_ref }}" == "main" ]]; then
+            MESSAGE="🚀 Nova release gerada e armazenada no Snowflake!"
+          else
+            MESSAGE="🧠 Análise técnica concluída para PR em staging!"
+          fi
 
-          cat release_result.txt | tail -n +3 > clean_release.txt
-          NOTE=$(cat clean_release.txt | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
-          echo "note=$NOTE" >> $GITHUB_OUTPUT
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"${MESSAGE}\"}" $SLACK_WEBHOOK_URL
 
-      - name: Comentar release note no PR
-        if: github.base_ref == 'main'
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          message: |
-            🚀 **Release Note (Gerada automaticamente)**
-            ---
-            ${{ steps.release_note.outputs.note }}
-
-      - name: Inserir dados na tabela release_notes
+      - name: (Somente main) Inserir release note no Snowflake
         if: github.base_ref == 'main'
         env:
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
           SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
           SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
           SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
           SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
-          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          AUTHOR: ${{ github.event.pull_request.user.login }}
-          TITLE: ${{ github.event.pull_request.title }}
-          CHANGES_SUMMARY: ${{ steps.tech_doc.outputs.doc }}
-          RELEASE_NOTE: ${{ steps.release_note.outputs.note }}
+          RELEASE_NOTE: ${{ steps.snowflake.outputs.release_note }}
+          GITHUB_PR_NUMBER: ${{ github.event.number }}
+          GITHUB_PR_TITLE: ${{ github.event.pull_request.title }}
+          GITHUB_AUTHOR: ${{ github.actor }}
         run: |
-          VERSION=$(git describe --tags --abbrev=0 || echo "v0.0.0")
-          QUERY="
-          INSERT INTO release_notes (VERSION, PR_NUMBER, AUTHOR, TITLE, CHANGES_SUMMARY, RELEASE_NOTE, CREATED_AT)
-          VALUES (
-            '$VERSION',
-            $PR_NUMBER,
-            '$AUTHOR',
-            '$TITLE',
-            '$CHANGES_SUMMARY',
-            '$RELEASE_NOTE',
-            CURRENT_TIMESTAMP()
-          );
-          "
-          snowsql -a $SNOWFLAKE_ACCOUNT -u $SNOWFLAKE_USER -r $SNOWFLAKE_ROLE \
-                  -w $SNOWFLAKE_WAREHOUSE -d $SNOWFLAKE_DATABASE -s $SNOWFLAKE_SCHEMA \
-                  -q "$QUERY"
+          python <<'EOF'
+          import os, snowflake.connector
+
+          conn = snowflake.connector.connect(
+              user=os.getenv("SNOWFLAKE_USER"),
+              password=os.getenv("SNOWFLAKE_PASSWORD"),
+              account=os.getenv("SNOWFLAKE_ACCOUNT"),
+              warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
+              database=os.getenv("SNOWFLAKE_DATABASE"),
+              schema=os.getenv("SNOWFLAKE_SCHEMA"),
+              role=os.getenv("SNOWFLAKE_ROLE")
+          )
+          cur = conn.cursor()
+          cur.execute(f"""
+            INSERT INTO release_notes (VERSION, PR_NUMBER, AUTHOR, TITLE, CHANGES_SUMMARY, RELEASE_NOTE, CREATED_AT)
+            VALUES (
+              'v1.0.0',
+              {os.getenv("GITHUB_PR_NUMBER")},
+              '{os.getenv("GITHUB_AUTHOR")}',
+              '{os.getenv("GITHUB_PR_TITLE").replace("'", "''")}',
+              'Mudanças integradas automaticamente.',
+              '{os.getenv("RELEASE_NOTE").replace("'", "''")}',
+              CURRENT_TIMESTAMP()
+            );
+          """)
+          conn.commit()
+          cur.close()
+          conn.close()
+          EOF
