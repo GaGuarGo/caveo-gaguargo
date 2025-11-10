@@ -50,14 +50,14 @@ jobs:
           PR_NUMBER: ${{ env.PR_NUMBER }}
         run: |
           python <<'EOF'
-          import os, base64, snowflake.connector
+          import os, base64, snowflake.connector, aiofiles, asyncio
 
           pr_number = int(os.getenv("PR_NUMBER", "0"))
 
           # Lê o diff
-          with open("diff.txt", "r") as f:
-              diff_content = f.read()
-          
+          async with aiofiles.open("diff.txt", "r") as f:
+          diff_content = await f.read()
+
           print(f"📄 Tamanho do diff: {len(diff_content)} caracteres")
 
           # Trunca se for muito grande (por segurança)
