@@ -77,7 +77,7 @@ jobs:
           try:
               # Insere o diff
               cur.execute(
-                  "INSERT INTO pr_diffs (pr_number, diff_text) VALUES (%s, %s)",
+                  "INSERT INTO code_diffs (pr_number, diff_text) VALUES (%s, %s)",
                   (pr_number, diff_content)
               )
 
