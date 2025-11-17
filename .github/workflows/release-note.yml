@@ -18,7 +18,7 @@ jobs:
       - name: Get PR diff and export as variable
         id: diff
         run: |
-          python pr_diff.py
+          python python .github/workflows/pr_diff.py
           eval "$(python ./github/workflows/pr_diff.py)"
 
       - name: Set up Python
