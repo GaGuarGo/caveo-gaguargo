@@ -19,7 +19,7 @@ jobs:
         id: diff
         run: |
           python pr_diff.py
-          eval "$(python pr_diff.py)"
+          eval "$(python ./github/workflows/pr_diff.py)"
 
       - name: Set up Python
         uses: actions/setup-python@v5
