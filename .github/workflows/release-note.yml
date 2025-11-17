@@ -31,6 +31,9 @@ jobs:
 
           # Trunca se muito grande (Snowflake tem limite)
           DIFF_SHORT=$(echo "$DIFF" | head -c 16000)
+          
+          printf "Diff obtido (tamanho: %d bytes)\n" "$(echo -n "$DIFF_SHORT" | wc -c)"
+
           # Codifica em base64 para evitar problemas de encoding
           DIFF_B64=$(echo "$DIFF_SHORT" | base64 | tr -d '\n')
           echo "DIFF_B64=$DIFF_B64" >> $GITHUB_ENV
@@ -65,6 +68,8 @@ jobs:
               raise Exception("❌ Nenhum diff encontrado")
 
           diff_text = base64.b64decode(diff_b64.encode()).decode(errors="ignore")
+
+          print(f"diff_text length: {len(diff_text)}")
 
           # Conecta ao Snowflake
           conn = snowflake.connector.connect(
