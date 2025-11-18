@@ -29,7 +29,8 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "Obtendo diff do Pull Request..."
             curl -s -H "Accept: application/vnd.github.v3.diff" \
-              "${{ github.event.pull_request.diff_url }}" > diff.txt
+                 -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                 "${{ github.event.pull_request.diff_url }}" > diff.txt
             echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
           else
             echo "Obtendo diff entre main e HEAD..."
