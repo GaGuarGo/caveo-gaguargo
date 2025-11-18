@@ -1,4 +1,4 @@
-name: Save PR Diff to Snowflake (direct)
+name: Save PR Diff to Snowflake
 
 on:
   pull_request:
@@ -15,12 +15,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Get PR diff and export as variable
-        id: diff
-        run: |
-          python python .github/workflows/pr_diff.py
-          eval "$(python ./github/workflows/pr_diff.py)"
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -28,6 +22,21 @@ jobs:
 
       - name: Install dependencies
         run: pip install snowflake-connector-python
+
+      - name: Get PR diff
+        id: diff
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "Obtendo diff do Pull Request..."
+            curl -s -H "Accept: application/vnd.github.v3.diff" \
+              "${{ github.event.pull_request.diff_url }}" > diff.txt
+            echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          else
+            echo "Obtendo diff entre main e HEAD..."
+            git fetch origin main
+            git diff origin/main...HEAD > diff.txt
+            echo "PR_NUMBER=0" >> $GITHUB_ENV
+          fi
 
       - name: Save diff to Snowflake
         env:
@@ -39,20 +48,23 @@ jobs:
           SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
           SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
           PR_NUMBER: ${{ env.PR_NUMBER }}
-          DIFF_B64: ${{ env.DIFF_B64 }}
         run: |
           python <<'EOF'
           import os, base64, snowflake.connector
 
           pr_number = int(os.getenv("PR_NUMBER", "0"))
-          diff_b64 = os.getenv("DIFF_B64", "")
 
-          if not diff_b64:
-              raise Exception("❌ Nenhum diff encontrado")
+          # Lê o diff
+          with open("diff.txt", "r") as f:
+              diff_content = f.read()
+          
+          print(f"📄 Tamanho do diff: {len(diff_content)} caracteres")
 
-          diff_text = base64.b64decode(diff_b64.encode()).decode(errors="ignore")
+          # Trunca se for muito grande (por segurança)
+          diff_content = diff_content[:20000]
 
-          print(f"diff_text length: {len(diff_text)}")
+          # Codifica em base64 (para evitar erro de parsing)
+          diff_encoded = base64.b64encode(diff_content.encode("utf-8")).decode("utf-8")
 
           # Conecta ao Snowflake
           conn = snowflake.connector.connect(
@@ -67,13 +79,15 @@ jobs:
 
           cur = conn.cursor()
           try:
-              
+             
+              # Insere o diff
               cur.execute(
                   "INSERT INTO code_diffs (pr_number, diff_text) VALUES (%s, %s)",
-                  (pr_number, diff_text)
+                  (pr_number, diff_encoded)
               )
 
-              print(f"✅ Diff salvo no Snowflake para PR #{pr_number}")
+              print(f"✅ Diff salvo com sucesso no Snowflake para PR #{pr_number}")
+
           finally:
               cur.close()
               conn.close()
